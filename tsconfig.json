@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "lib": ["es2015"],
+    "module": "commonjs",
+    "target": "es5",
+    "sourceMap": true,
+    "declaration": true,
+    "outDir": "build",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["index.ts", "src"],
+  "exclude": ["node_modules"]
+}
