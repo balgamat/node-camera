@@ -1,7 +1,3 @@
-import NodeCamera from '../index';
+import {Camera} from "./Camera";
 
-const nodeCamera: NodeCamera = {
-
-};
-
-export default nodeCamera;
+export {Camera}
