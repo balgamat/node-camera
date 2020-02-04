@@ -1,4 +1,4 @@
-export interface ICmdResult {
+export interface CommandResult {
   error?: any;
   data?: any;
 }
@@ -6,6 +6,12 @@ export interface ICmdResult {
 export interface ConnectionParams {
   model: string;
   port: string;
+}
+
+export interface Callbacks {
+  onData?: (data: any) => void;
+  onError?: (error: any) => void;
+  onClose?: (exitCode: number) => void;
 }
 
 export enum Identificator {
@@ -25,3 +31,5 @@ export type CaptureOptions = Partial<{
   forceOverwrite: boolean;
   skipExisting: boolean;
 }>;
+
+export type BurstOptions = { length: number, filename?: string };

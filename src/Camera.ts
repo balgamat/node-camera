@@ -1,23 +1,50 @@
-import { execCommand } from "./execCommand";
-import { CaptureOptions, ConnectionParams, Identificator } from "./types";
+import { execCommand, spawnCommand } from "./execCommand";
+import {
+  BurstOptions,
+  Callbacks,
+  CaptureOptions,
+  ConnectionParams,
+  Identificator
+} from "./types";
+import { EventEmitter } from "events";
+import { ChildProcess } from "child_process";
 
 export class Camera {
-  private static _identifyCamerasBy: Identificator;
-  private readonly port: string;
-  private readonly model: string;
-
   constructor(params: ConnectionParams) {
     this.model = params.model;
     this.port = params.port;
+    this._process = null;
+    this._identifyBy = Identificator.Model;
   }
 
-  get identififyCameraBy(): Identificator {
-    return Camera._identifyCamerasBy;
+  public get identifyBy(): Identificator {
+    return this._identifyBy;
   }
 
-  set identififyCameraBy(i: Identificator) {
-    Camera._identifyCamerasBy = i;
-  }
+  private exec = (args: string[]) =>
+    execCommand([
+      this._identifyBy === Identificator.Model
+        ? `--camera=${this.model}`
+        : `--port=${this.port}`,
+      ...args
+    ]);
+
+  private spawn = (args: string[], callbacks?: Callbacks) =>
+    spawnCommand(
+      [
+        this._identifyBy === Identificator.Model
+          ? `--camera=${this.model}`
+          : `--port=${this.port}`,
+        ...args
+      ],
+      callbacks
+    );
+
+  private fn = (args: string[]) => () => this.exec(args);
+  private readonly model: string;
+  private readonly port: string;
+  private _identifyBy: Identificator;
+  private _process: ChildProcess | null;
 
   public static listCameras = async () =>
     new Promise<any>(async (resolve, reject) => {
@@ -36,21 +63,47 @@ export class Camera {
       resolve(cameras);
     });
 
-  public captureImage = async ({
-    bulb,
-    filename,
-    forceOverwrite,
-    frames,
-    interval,
-    keep,
-    keepRAW,
-    noKeep,
-    resetInterval,
-    skipExisting
-  }: CaptureOptions) => {
+  public stopCapture = () => this._process?.kill();
+
+  public set identifyBy(i: Identificator) {
+    this._identifyBy = i;
+  }
+
+  public burst = (
+    { length, filename }: BurstOptions,
+    callbacks?: Callbacks
+  ) => {
+    const args = [
+      `--set-config capturetarget=0`,
+      "--set-config drivemode=`Continuous`",
+      `--set-config eosremoterelease=2`,
+      `--wait-event-and-download=${length}s`,
+      `--set-config eosremoterelease=0`,
+      `--wait-event=1s`,
+    ];
+    !!filename && args.push(`--filename=${filename}%n.%C`);
+    console.log("ARGS", args);
+    this._process = this.spawn(args, callbacks);
+  };
+
+  public captureImage = (
+    {
+      bulb,
+      filename,
+      forceOverwrite,
+      frames,
+      interval,
+      keep,
+      keepRAW,
+      noKeep,
+      resetInterval,
+      skipExisting
+    }: CaptureOptions,
+    callbacks?: Callbacks
+  ) => {
     const args: string[] = [];
     !!bulb && args.push(`--bulb=${bulb}`);
-    !!filename && args.push(`--filename="${filename}"`);
+    !!filename && args.push(`--filename=${filename}`);
     !!frames && args.push(`--frames=${frames}`);
     !!interval && args.push(`--interval=${interval}`);
     forceOverwrite && args.push(`--force-overwrite`);
@@ -60,31 +113,39 @@ export class Camera {
     resetInterval && args.push(`--reset-interval`);
     skipExisting && args.push(`--skip-existing`);
 
-    console.log("args", args);
-
-    return new Promise<any>(async (resolve, reject) => {
-      try {
-        const { data, error } = await this.exec([
-          "--capture-image-and-download",
-          ...args
-        ]);
-        if (!!error) reject({ error });
-        resolve({ data });
-      } catch (error) {
-        reject(error);
-      }
-    });
+    this._process = this.spawn(
+      ["--capture-image-and-download", ...args],
+      callbacks
+    );
   };
 
-  private exec = (args: string[]) =>
-    execCommand([
-      Camera._identifyCamerasBy === Identificator.Model
-        ? `--camera="${this.model}"`
-        : `--port="${this.port}"`,
-      ...args
-    ]);
+  public timelapse = (
+    {
+      filename,
+      frames,
+      interval = 1
+    }: Pick<CaptureOptions, "frames" | "interval" | "filename">,
+    callbacks?: Callbacks
+  ) => {
+    const args: string[] = [];
+    !!filename && args.push(`--filename=${filename}%n.%C`);
+    !!frames && args.push(`--frames=${frames}`);
+    !!interval && args.push(`--interval=${interval}`);
+    args.push(`--force-overwrite`);
 
-  private fn = (args: string[]) => () => this.exec(args);
+    this._process = this.spawn(
+      ["--capture-image-and-download", ...args],
+      callbacks
+    );
+  };
+
+  public getConfig = (properties: string[]) =>
+    this.exec(properties.map(p => `--get-config ${p}`));
+
+  public setConfig = (properties: Record<string, any>) =>
+    this.exec(
+      Object.keys(properties).map(k => `--set-config ${k}=${properties[k]}`)
+    );
 
   public reset = this.fn(["--reset"]);
 }
