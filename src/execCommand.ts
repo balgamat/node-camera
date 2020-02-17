@@ -23,17 +23,14 @@ export const spawnCommand = (args: string[], callbacks?: Callbacks) => {
   const command = spawn("gphoto2", args);
 
   command.stdout.on("data", (data: any) => {
-    console.log(`node-camera/STDOUT >> ${data}`);
     callbacks?.onData && callbacks?.onData(data);
   });
 
   command.stderr.on("data", (error: any) => {
-    console.log(`node-camera/STDERR >> ${error}`);
     callbacks?.onError && callbacks?.onError(error);
   });
 
   command.on("close", (code: number) => {
-    console.log(`node-camera EXITED ${code}: ${EXIT_CODES[code] || "UNKNOWN"}`);
     callbacks?.onClose && callbacks?.onClose(EXIT_CODES[code] || "UNKNOWN");
   });
 

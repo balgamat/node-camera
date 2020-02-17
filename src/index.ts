@@ -1,7 +1,7 @@
 import { Camera } from "./Camera";
 import {
   CommandResult,
-  ConnectionParams,
+  CameraParams,
   Callbacks,
   CaptureOptions,
   Identificator,
@@ -11,7 +11,7 @@ import {
 export {
   Camera,
   CommandResult,
-  ConnectionParams,
+  CameraParams,
   Callbacks,
   CaptureOptions,
   Identificator,

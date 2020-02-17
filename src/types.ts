@@ -3,9 +3,10 @@ export interface CommandResult {
   data?: any;
 }
 
-export interface ConnectionParams {
+export interface CameraParams {
   model: string;
   port: string;
+  configuration?: object;
 }
 
 export interface Callbacks {

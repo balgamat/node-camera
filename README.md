@@ -105,6 +105,11 @@ Note that %: is still in alpha stage, and the actual character or syntax may sti
 
 #### `Camera.listCameras(): Promise<ConnectionParams>`
 
+#### `getConfigurationTree(port: string): Promise<CommandResult>`
+
+Gets the whole configuration tree for the camera including current values and values that are possible to be set. This is useful e.g. for making a form to set up the camera.
+
+
 ### 3.2 Constructors
 
 #### `Camera(cameraParams: ConnectionParams): Camera`
@@ -163,12 +168,13 @@ CommandResult {
    }
 ```
 
-#### Connection Params
+#### Camera Params
 
 | **Name**  | **Type** | **Default** | **Example value** |
 | :-------: | :------: | :---------: | :---------------: |
 | **model** |  string  |      -      |  _Canon EOS 7D_   |
 | **port**  |  string  |      -      |   _usb:020,006_   |
+| **configuration**  |  object  |      -      |   _try for yourself_  |
 
 #### Callbacks
 

@@ -1,12 +1,15 @@
 {
   "name": "node-camera",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "This `gphoto2` wrapper for Node.js enables you to capture images, bursts, timelapses or even video.",
   "main": "build/index.js",
   "scripts": {
     "build": "rm -rf ./build && tsc",
     "prepare": "yarn build",
-    "example": "ts-node examples/example.ts"
+    "example": "ts-node examples/example.ts",
+    "burst": "ts-node examples/burst.ts",
+    "snap": "ts-node examples/snap.ts",
+    "list-cameras": "ts-node examples/list.ts"
   },
   "repository": {
     "type": "git",
@@ -24,7 +27,8 @@
     "burst",
     "DSLR",
     "libgphoto2",
-    "image capture"
+    "image capture",
+    "camera configuration"
   ],
   "author": "Matej Balga",
   "license": "GPL-3.0",

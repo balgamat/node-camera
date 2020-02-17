@@ -3,14 +3,16 @@ import {
   BurstOptions,
   Callbacks,
   CaptureOptions,
-  ConnectionParams,
+  CommandResult,
+  CameraParams,
   Identificator
 } from "./types";
-import { EventEmitter } from "events";
 import { ChildProcess } from "child_process";
+// @ts-ignore
+import { assocPath } from "./utilities";
 
 export class Camera {
-  constructor(params: ConnectionParams) {
+  constructor(params: CameraParams) {
     this.model = params.model;
     this.port = params.port;
     this._process = null;
@@ -21,16 +23,21 @@ export class Camera {
     return this._identifyBy;
   }
 
-  private exec = (args: string[]) =>
-    execCommand([
+  private exec = (args: string[]) => {
+    !!this._process && this._process.kill();
+
+    return execCommand([
       this._identifyBy === Identificator.Model
         ? `--camera=${this.model}`
         : `--port=${this.port}`,
       ...args
     ]);
+  };
 
-  private spawn = (args: string[], callbacks?: Callbacks) =>
-    spawnCommand(
+  private spawn = (args: string[], callbacks?: Callbacks) => {
+    !!this._process && this._process.kill();
+
+    return spawnCommand(
       [
         this._identifyBy === Identificator.Model
           ? `--camera=${this.model}`
@@ -39,6 +46,7 @@ export class Camera {
       ],
       callbacks
     );
+  };
 
   private fn = (args: string[]) => () => this.exec(args);
   private readonly model: string;
@@ -52,15 +60,24 @@ export class Camera {
       if (!!error) reject({ error });
       const [_, __, ...rest] = data.split("\n");
       const cameras = rest
-        .map((line: string) => {
+        .map(async (line: string) => {
           const { 0: model, 1: port } = line
             .split("  ")
             .filter(fragment => fragment !== "")
             .map(fragment => (!!fragment ? fragment.trim() : fragment));
-          return { model, port } as ConnectionParams;
-        })
-        .filter((c: ConnectionParams) => c.model && c.port);
-      resolve(cameras);
+          const configuration =
+            !!model && !!port
+              ? (await Camera.getConfigurationTree(port)).data
+              : undefined;
+          return {
+            model,
+            port,
+            configuration
+          } as CameraParams;
+        });
+      const result = await Promise.all(cameras);
+      // @ts-ignore
+      resolve(result.filter((c: CameraParams) => c.model && c.port));
     });
 
   public stopCapture = () => this._process?.kill();
@@ -73,17 +90,23 @@ export class Camera {
     { length, filename }: BurstOptions,
     callbacks?: Callbacks
   ) => {
-    const args = [
-      `--set-config capturetarget=0`,
-      "--set-config drivemode=`Continuous`",
-      `--set-config eosremoterelease=2`,
-      `--wait-event-and-download=${length}s`,
-      `--set-config eosremoterelease=0`,
-      `--wait-event=1s`,
-    ];
-    !!filename && args.push(`--filename=${filename}%n.%C`);
-    console.log("ARGS", args);
-    this._process = this.spawn(args, callbacks);
+    if (this.model.startsWith("Canon")) {
+      const args = [
+        `--set-config=capturetarget=0`,
+        `--set-config=drivemode=2`,
+        `--set-config=eosremoterelease=2`,
+        `--wait-event-and-download=${length}s`,
+        `--set-config=eosremoterelease=4`,
+        `--wait-event=1s`
+      ];
+      !!filename && args.push(`--filename=${filename}%n.%C`);
+      this._process = this.spawn(args, callbacks);
+    } else {
+      callbacks?.onError &&
+        callbacks.onError(
+          "NOT_SUPPORTED: Burst is supported on Canon cameras only."
+        );
+    }
   };
 
   public captureImage = (
@@ -144,8 +167,58 @@ export class Camera {
 
   public setConfig = (properties: Record<string, any>) =>
     this.exec(
-      Object.keys(properties).map(k => `--set-config ${k}=${properties[k]}`)
+      Object.keys(properties).map(k => `--set-config=${k}=${properties[k]}`)
     );
 
   public reset = this.fn(["--reset"]);
+
+  static getConfigurationTree = (port: string) =>
+    new Promise<CommandResult>(async (resolve, reject) => {
+      try {
+        const { data, error } = await execCommand([
+          `--port=${port}`,
+          `--list-all-config`
+        ]);
+        if (error) reject(error);
+
+        const props: string[] = data.trim().split("END\n");
+        const tree = props.reduce((tree, prop) => {
+          if (prop === "") return tree;
+          const [
+            pathLine,
+            labelLine,
+            readonlyLine,
+            typeLine,
+            valueLine,
+            ...choices
+          ] = prop.trim().split("\n");
+
+          const propertyObj = {
+            label: labelLine.slice(7),
+            isReadonly: readonlyLine === "Readonly: 1",
+            type: typeLine.slice(6),
+            value: valueLine.slice(9),
+
+            options:
+              choices.length > 0
+                ? choices.map(choice => {
+                    const composite = choice.slice(8);
+                    const spacePosition = composite.indexOf(" ");
+                    return spacePosition === -1
+                      ? undefined
+                      : {
+                          label: composite.slice(spacePosition + 1),
+                          value: composite.slice(0, spacePosition)
+                        };
+                  })
+                : undefined
+          };
+          return assocPath(pathLine.slice(6).split("/"), propertyObj, tree);
+        }, {});
+
+        resolve({ data: tree });
+      } catch (e) {
+        reject({ error: e });
+      }
+    });
 }
