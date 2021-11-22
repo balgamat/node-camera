@@ -97,7 +97,7 @@ export class Camera {
         `--set-config=eosremoterelease=2`,
         `--wait-event-and-download=${length}s`,
         `--set-config=eosremoterelease=4`,
-        `--wait-event=1s`
+        `--wait-event=CAPTURECOMPLETE`
       ];
       !!forceOverwrite && args.push(`--force-overwrite`)
       !!filename && args.push(`--filename=${filename}%n.%C`);
