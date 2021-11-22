@@ -33,4 +33,4 @@ export type CaptureOptions = Partial<{
   skipExisting: boolean;
 }>;
 
-export type BurstOptions = { burstMode?: number, captureTarget: number, length: number, filename?: string, forceOverwrite?: boolean };
+export type BurstOptions = { captureTarget: number, length: number, burstMode?: number,  deleteAllFiles?: boolean, filename?: string, forceOverwrite?: boolean };

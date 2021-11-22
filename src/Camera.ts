@@ -87,7 +87,7 @@ export class Camera {
   }
 
   public burst = (
-    { length, filename, burstMode, forceOverwrite, captureTarget }: BurstOptions,
+    { length, filename, burstMode, forceOverwrite, captureTarget, deleteAllFiles }: BurstOptions,
     callbacks?: Callbacks
   ) => {
     if (this.model.startsWith("Canon")) {
@@ -101,6 +101,7 @@ export class Camera {
       ];
       !!forceOverwrite && args.push(`--force-overwrite`)
       !!filename && args.push(`--filename=${filename}%n.%C`);
+      deleteAllFiles && args.push(`-f`) && args.push(`/`) && args.push(`--delete-all-files`) && args.push(`--recurse`)
       this._process = this.spawn(args, callbacks);
     } else {
       callbacks?.onError &&
