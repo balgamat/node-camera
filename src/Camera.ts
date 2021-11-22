@@ -101,6 +101,7 @@ export class Camera {
       ];
       !!forceOverwrite && args.push(`--force-overwrite`)
       !!filename && args.push(`--filename=${filename}%n.%C`);
+      captureTarget === 1 && args.push(`--get-all-files`)
       deleteAllFiles && args.push(`-f`) && args.push(`/`) && args.push(`--delete-all-files`) && args.push(`--recurse`)
       this._process = this.spawn(args, callbacks);
     } else {
