@@ -87,18 +87,19 @@ export class Camera {
   }
 
   public burst = (
-    { length, filename }: BurstOptions,
+    { length, filename, burstMode, forceOverwrite, captureTarget }: BurstOptions,
     callbacks?: Callbacks
   ) => {
     if (this.model.startsWith("Canon")) {
       const args = [
-        `--set-config=capturetarget=0`,
-        `--set-config=drivemode=2`,
+        `--set-config=capturetarget=${ captureTarget === undefined ? 0 : captureTarget}`,
+        `--set-config=drivemode=${burstMode === undefined ? 2 : burstMode}`,
         `--set-config=eosremoterelease=2`,
         `--wait-event-and-download=${length}s`,
         `--set-config=eosremoterelease=4`,
         `--wait-event=1s`
       ];
+      !!forceOverwrite && args.push(`--force-overwrite`)
       !!filename && args.push(`--filename=${filename}%n.%C`);
       this._process = this.spawn(args, callbacks);
     } else {
