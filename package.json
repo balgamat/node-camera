@@ -41,6 +41,7 @@
     "prettier": "^1.19.1",
     "pretty-quick": "^2.0.1",
     "ts-node": "^8.6.2",
-    "typescript": "^3.7.2"
+    "typescript": "^3.7.2",
+    "yarn": "^1.22.17"
   }
 }
